@@ -1,10 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>HTML Offensive</title>
+  <meta charset="UTF-8">
+  <title>HTML Offensive</title>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <h1>HTML Offensive is running 🔥</h1>
+  <h1>HTML Offensive is running 🔥</h1>
+
+  <script>
+    // Подключаемся к серверу
+    const socket = io();
+
+    // Пример: отправляем движение
+    document.addEventListener("keydown", (e) => {
+      let move = { x: 0, y: 0, z: 0 };
+
+      if (e.key === "w") move.z = 1;
+      if (e.key === "s") move.z = -1;
+      if (e.key === "a") move.x = -1;
+      if (e.key === "d") move.x = 1;
+
+      socket.emit("playerMove", move);
+    });
+
+    // Пример: получаем движения других игроков
+    socket.on("updatePlayer", (data) => {
+      console.log("Other player moved:", data);
+    });
+
+    // Пример: получаем выстрелы других игроков
+    socket.on("playerHit", (data) => {
+      console.log("Player hit:", data);
+    });
+
+    socket.on("playerDisconnected", (data) => {
+      console.log("Player disconnected:", data.id);
+    });
+  </script>
 </body>
 </html>
