@@ -13,7 +13,7 @@ app.get("/", (req, res) => {
     res.send("HTML Offensive server is running 🔥");
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Render даст свой порт через process.env.PORT
 server.listen(PORT, () => {
     console.log("Server started on port " + PORT);
 });
