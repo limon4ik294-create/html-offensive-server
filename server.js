@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Раздаём статические файлы
+// Раздаём статические файлы из папки frontend
 app.use(express.static(path.join(__dirname, "frontend")));
 
 // Главная страница
@@ -15,31 +15,16 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "frontend", "index.html"));
 });
 
-// События Socket.IO
+// Socket.IO события
 io.on("connection", (socket) => {
     console.log("Player connected:", socket.id);
 
-    // Пример: игрок отправляет координаты
     socket.on("playerMove", (data) => {
-        console.log(`Player ${socket.id} moved:`, data);
-
-        // Отправляем всем остальным игрокам
-        socket.broadcast.emit("updatePlayer", {
-            id: socket.id,
-            position: data
-        });
+        socket.broadcast.emit("updatePlayer", { id: socket.id, position: data });
     });
 
-    // Пример: игрок наносит урон
     socket.on("playerShoot", (data) => {
-        console.log(`Player ${socket.id} shot:`, data);
-
-        // Можно отправлять другим игрокам
-        socket.broadcast.emit("playerHit", {
-            id: socket.id,
-            targetId: data.targetId,
-            damage: data.damage
-        });
+        socket.broadcast.emit("playerHit", { id: socket.id, targetId: data.targetId, damage: data.damage });
     });
 
     socket.on("disconnect", () => {
@@ -48,6 +33,7 @@ io.on("connection", (socket) => {
     });
 });
 
+// ✅ Объявляем PORT ТОЛЬКО ОДИН РАЗ
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log("Server started on port " + PORT);
