@@ -3,40 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <title>HTML Offensive</title>
+  <style>
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+    #renderCanvas { width:100%; height:100%; display:block; }
+  </style>
   <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-  <h1>HTML Offensive is running 🔥</h1>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script type="module">
+    import { createMirageMap } from './maps/mirage.js';
 
-  <script>
-    // Подключаемся к серверу
     const socket = io();
 
-    // Пример: отправляем движение
-    document.addEventListener("keydown", (e) => {
-      let move = { x: 0, y: 0, z: 0 };
+    // Babylon.js сцена
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true);
+    const scene = new BABYLON.Scene(engine);
 
-      if (e.key === "w") move.z = 1;
-      if (e.key === "s") move.z = -1;
-      if (e.key === "a") move.x = -1;
-      if (e.key === "d") move.x = 1;
+    // Камера
+    const camera = new BABYLON.FreeCamera("cam", new BABYLON.Vector3(0,5,-15), scene);
+    camera.setTarget(BABYLON.Vector3.Zero());
+    camera.attachControl(canvas, true);
 
-      socket.emit("playerMove", move);
-    });
+    // Свет
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0,1,0), scene);
+    light.intensity = 0.9;
 
-    // Пример: получаем движения других игроков
+    // Игрок (свой)
+    const playerMesh = BABYLON.MeshBuilder.CreateBox("player", {size:1}, scene);
+    playerMesh.position.y = 0.5;
+
+    // Другие игроки
+    const otherPlayers = {};
     socket.on("updatePlayer", (data) => {
-      console.log("Other player moved:", data);
+        let mesh = otherPlayers[data.id];
+        if(!mesh){
+            mesh = BABYLON.MeshBuilder.CreateBox(data.id, {size:1}, scene);
+            mesh.position.y = 0.5;
+            otherPlayers[data.id] = mesh;
+        }
+        mesh.position.x = data.position.x;
+        mesh.position.y = data.position.y;
+        mesh.position.z = data.position.z;
     });
-
-    // Пример: получаем выстрелы других игроков
-    socket.on("playerHit", (data) => {
-      console.log("Player hit:", data);
-    });
-
     socket.on("playerDisconnected", (data) => {
-      console.log("Player disconnected:", data.id);
+        if(otherPlayers[data.id]){
+            otherPlayers[data.id].dispose();
+            delete otherPlayers[data.id];
+        }
     });
+
+    // ----------------- Подключаем карту -----------------
+    createMirageMap(scene);
+
+    // ----------------- Управление игроком -----------------
+    const keys = { w:false, a:false, s:false, d:false };
+    document.addEventListener("keydown", (e) => { if(keys[e.key]!==undefined) keys[e.key]=true; });
+    document.addEventListener("keyup", (e) => { if(keys[e.key]!==undefined) keys[e.key]=false; });
+
+    engine.runRenderLoop(() => {
+        let move = {x:0, y:0, z:0};
+        if(keys.w) move.z += 0.2;
+        if(keys.s) move.z -= 0.2;
+        if(keys.a) move.x -= 0.2;
+        if(keys.d) move.x += 0.2;
+
+        playerMesh.position.x += move.x;
+        playerMesh.position.z += move.z;
+
+        // Отправка позиции на сервер
+        socket.emit("playerMove", playerMesh.position);
+
+        scene.render();
+    });
+
+    window.addEventListener("resize", () => { engine.resize(); });
   </script>
+</head>
+<body>
+  <canvas id="renderCanvas"></canvas>
 </body>
 </html>
